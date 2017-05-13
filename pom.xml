@@ -10,7 +10,7 @@
     <name>SydneyGraph Filter</name>
 
     <properties>
-    	<main.class>org.researchgraph.Main</main.class>
+    	<main.class>Main</main.class>
 	    <jdk.version>1.8</jdk.version>
 	</properties>
 
@@ -40,6 +40,12 @@
             	</archive>
             </configuration>
         	</plugin>
+
+        	<plugin>
+       		<groupId>org.apache.maven.plugins</groupId>
+        	<artifactId>maven-jar-plugin</artifactId>
+        	<version>3.0.2</version>
+ 			</plugin>
 
 		</plugins>
 	</build>
