@@ -1,5 +1,3 @@
-package org.researchgraph;
-
 import org.gephi.appearance.api.AppearanceController;
 import org.gephi.appearance.api.AppearanceModel;
 import org.gephi.filters.api.FilterController;

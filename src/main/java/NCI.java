@@ -1,5 +1,3 @@
-package org.researchgraph;
-
 /**
  * Created by wangkun on 15/05/2017.
  */
@@ -66,7 +64,7 @@ public class NCI {
         Container container;
         try {
             //Define path to the graph file
-            File file = new File(getClass().getResource("/graph.db.graphml").toURI());
+            File file = new File(getClass().getResource("/NCI.graphml").toURI());
             container = importController.importFile(file);
             container.getLoader().setEdgeDefault(EdgeDirectionDefault.DIRECTED);   //Force DIRECTED
         } catch (Exception ex) {
@@ -131,7 +129,7 @@ public class NCI {
         try {
             //Define Export file name
             //ec.exportFile(new File("headless_simple.pdf"));
-            ec.exportFile(new File("test.gexf"), exporter);
+            ec.exportFile(new File("output.gexf"), exporter);
         } catch (IOException ex) {
             ex.printStackTrace();
             return;
