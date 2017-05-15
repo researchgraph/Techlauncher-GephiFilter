@@ -91,7 +91,7 @@ public class NCI {
 
 
 
-        //Giant Components Filter - Result Nodes: 406398 / Edges: 754550
+        //Giant Components Filter
         GiantComponentBuilder.GiantComponentFilter giantComponentFilter = new GiantComponentBuilder.GiantComponentFilter();
         giantComponentFilter.init(graph);
         Query queryGiantComponent = filterController.createQuery(giantComponentFilter);
@@ -99,7 +99,7 @@ public class NCI {
         //Degree Filter
         DegreeRangeBuilder.DegreeRangeFilter degreeFilter = new DegreeRangeBuilder.DegreeRangeFilter();
         degreeFilter.init(graph);
-        degreeFilter.setRange(new Range(3, Integer.MAX_VALUE));     //Remove nodes with degree < 15
+        degreeFilter.setRange(new Range(3, Integer.MAX_VALUE));     //Remove nodes with degree < 3
         Query queryDegreeFilter = filterController.createQuery(degreeFilter);
 
 
