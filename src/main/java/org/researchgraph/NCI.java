@@ -1,16 +1,27 @@
 package org.researchgraph;
 
+/**
+ * Created by wangkun on 15/05/2017.
+ */
+/* Ref: https://github.com/gephi/gephi/wiki/How-to-code-with-the-Toolkit */
+
+import java.awt.Color;
+import java.io.File;
+import java.io.IOException;
 import org.gephi.appearance.api.AppearanceController;
 import org.gephi.appearance.api.AppearanceModel;
+import org.gephi.appearance.api.Function;
+import org.gephi.appearance.plugin.RankingElementColorTransformer;
 import org.gephi.filters.api.FilterController;
 import org.gephi.filters.api.Query;
 import org.gephi.filters.api.Range;
-import org.gephi.filters.plugin.graph.DegreeRangeBuilder;
+import org.gephi.filters.plugin.graph.DegreeRangeBuilder.DegreeRangeFilter;
 import org.gephi.filters.plugin.graph.GiantComponentBuilder;
-import org.gephi.filters.plugin.graph.InDegreeRangeBuilder;
-import org.gephi.filters.plugin.graph.NeighborsBuilder;
-import org.gephi.filters.plugin.operator.INTERSECTIONBuilder;
-import org.gephi.graph.api.*;
+import org.gephi.graph.api.DirectedGraph;
+import org.gephi.graph.api.GraphController;
+import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.GraphView;
+import org.gephi.graph.api.UndirectedGraph;
 import org.gephi.io.exporter.api.ExportController;
 import org.gephi.io.exporter.spi.GraphExporter;
 import org.gephi.io.importer.api.Container;
@@ -21,19 +32,23 @@ import org.gephi.layout.plugin.force.StepDisplacement;
 import org.gephi.layout.plugin.force.yifanHu.YifanHuLayout;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
+import org.gephi.preview.api.PreviewProperty;
+import org.gephi.preview.types.EdgeColor;
 import org.gephi.project.api.ProjectController;
 import org.gephi.project.api.Workspace;
+import org.gephi.statistics.plugin.GraphDistance;
 import org.openide.util.Lookup;
 
-import java.io.File;
-import java.io.IOException;
+public class NCI {
 
-public class Main {
     public static void main(String[] args) {
-        Main main = new Main();
-        main.script();
+        NCI hs = new NCI();
+        hs.script();
+
     }
+
     public void script() {
+
         //Initialization - create ProjectController
         ProjectController projectController = Lookup.getDefault().lookup(ProjectController.class);
         projectController.newProject();
@@ -50,7 +65,8 @@ public class Main {
         //Import file
         Container container;
         try {
-            File file = new File(getClass().getResource("/sydney.graphml").toURI());    //Define path to the graph file
+            //Define path to the graph file
+            File file = new File(getClass().getResource("/graph.db.graphml").toURI());
             container = importController.importFile(file);
             container.getLoader().setEdgeDefault(EdgeDirectionDefault.DIRECTED);   //Force DIRECTED
         } catch (Exception ex) {
@@ -60,45 +76,22 @@ public class Main {
 
         //Append imported data to GraphAPI
         importController.process(container, new DefaultProcessor(), workspace);
+
         //See if graph is well imported
         DirectedGraph graph = graphModel.getDirectedGraph();
         System.out.println("Nodes: " + graph.getNodeCount());
         System.out.println("Edges: " + graph.getEdgeCount());
 
-        //Giant Components Filter - Result Nodes: 406398 / Edges: 754550
-        GiantComponentBuilder.GiantComponentFilter giantComponentFilter = new GiantComponentBuilder.GiantComponentFilter();
+        //Filter
+        GiantComponentBuilder.GiantComponentFilter giantComponentFilter = new GiantComponentBuilder
+                .GiantComponentFilter();
         giantComponentFilter.init(graph);
-        Query queryGiantComponent = filterController.createQuery(giantComponentFilter);
-
-        //Degree Filter
-        DegreeRangeBuilder.DegreeRangeFilter degreeFilter = new DegreeRangeBuilder.DegreeRangeFilter();
-        degreeFilter.init(graph);
-        degreeFilter.setRange(new Range(15, Integer.MAX_VALUE));     //Remove nodes with degree < 15
-        Query queryDegreeFilter = filterController.createQuery(degreeFilter);
-
-        //Neighbor Network filter
-        NeighborsBuilder.NeighborsFilter neighborsFilter = new NeighborsBuilder.NeighborsFilter();
-        neighborsFilter.setDepth(1);
-        neighborsFilter.setSelf(true);
-        Query queryNeighbor = filterController.createQuery(neighborsFilter);
-
-        //In-Degree Filter
-        InDegreeRangeBuilder.InDegreeRangeFilter inDegreeRangeFilter = new InDegreeRangeBuilder.InDegreeRangeFilter();
-        inDegreeRangeFilter.init(graph);
-        inDegreeRangeFilter.setRange(new Range(1,Integer.MAX_VALUE));
-        Query queryIndegree = filterController.createQuery(inDegreeRangeFilter);
-
-        filterController.add(queryGiantComponent);
-        filterController.add(queryDegreeFilter);
-        filterController.add(queryNeighbor);
-        filterController.add(queryIndegree);
-        filterController.setSubQuery(queryGiantComponent,queryDegreeFilter);
-
-        INTERSECTIONBuilder.IntersectionOperator intersectionOperator = new INTERSECTIONBuilder.IntersectionOperator();
-        Query finalQuery = filterController.createQuery(intersectionOperator);
-        filterController.setSubQuery(finalQuery,queryGiantComponent);
-        filterController.setSubQuery(finalQuery,queryNeighbor);
-        GraphView view = filterController.filter(finalQuery);
+        Query giantComponent = filterController.createQuery(giantComponentFilter);
+//        DegreeRangeFilter degreeFilter = new DegreeRangeFilter();
+//        degreeFilter.init(graph);
+//        degreeFilter.setRange(new Range(15, Integer.MAX_VALUE));     //Remove nodes with degree < 15
+//        Query query = filterController.createQuery(degreeFilter);
+        GraphView view = filterController.filter(giantComponent);
         graphModel.setVisibleView(view);    //Set the filter result as the visible view
 
         //Export Status
@@ -119,15 +112,26 @@ public class Main {
 
         layout.endAlgo();
 
-        ExportController exportController = Lookup.getDefault().lookup(ExportController.class);
+        //Get Centrality
+//        GraphDistance distance = new GraphDistance();
+//        distance.setDirected(true);
+//        distance.execute(graphModel);
 
-        //Export only visible graph
-        GraphExporter exporter = (GraphExporter) exportController.getExporter("gexf");     //Get GEXF exporter
+        //Define Output Preview
+//        model.getProperties().putValue(PreviewProperty.SHOW_NODE_LABELS, Boolean.TRUE);
+//        model.getProperties().putValue(PreviewProperty.EDGE_COLOR, new EdgeColor(Color.RED));
+//        model.getProperties().putValue(PreviewProperty.EDGE_THICKNESS, new Float(0.1f));
+//        model.getProperties().putValue(PreviewProperty.NODE_LABEL_FONT, model.getProperties().getFontValue(PreviewProperty.NODE_LABEL_FONT).deriveFont(8));
+
+        //Export file
+        ExportController ec = Lookup.getDefault().lookup(ExportController.class);
+        GraphExporter exporter = (GraphExporter) ec.getExporter("gexf");     //Get GEXF exporter
         exporter.setExportVisible(true);  //Only exports the visible (filtered) graph
         exporter.setWorkspace(workspace);
         try {
-            exportController.exportFile(new File("output.gexf"), exporter);
-            System.out.println("Filtered Graph Exported");
+            //Define Export file name
+            //ec.exportFile(new File("headless_simple.pdf"));
+            ec.exportFile(new File("test.gexf"), exporter);
         } catch (IOException ex) {
             ex.printStackTrace();
             return;
