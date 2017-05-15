@@ -2,15 +2,24 @@
  * Created by wangkun on 15/05/2017.
  */
 /* Ref: https://github.com/gephi/gephi/wiki/How-to-code-with-the-Toolkit */
+
+import java.awt.Color;
+import java.io.File;
+import java.io.IOException;
 import org.gephi.appearance.api.AppearanceController;
 import org.gephi.appearance.api.AppearanceModel;
+import org.gephi.appearance.api.Function;
+import org.gephi.appearance.plugin.RankingElementColorTransformer;
 import org.gephi.filters.api.FilterController;
 import org.gephi.filters.api.Query;
 import org.gephi.filters.api.Range;
-import org.gephi.filters.plugin.graph.DegreeRangeBuilder;
+import org.gephi.filters.plugin.graph.DegreeRangeBuilder.DegreeRangeFilter;
 import org.gephi.filters.plugin.graph.GiantComponentBuilder;
-import org.gephi.filters.plugin.operator.INTERSECTIONBuilder;
-import org.gephi.graph.api.*;
+import org.gephi.graph.api.DirectedGraph;
+import org.gephi.graph.api.GraphController;
+import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.GraphView;
+import org.gephi.graph.api.UndirectedGraph;
 import org.gephi.io.exporter.api.ExportController;
 import org.gephi.io.exporter.spi.GraphExporter;
 import org.gephi.io.importer.api.Container;
@@ -21,12 +30,12 @@ import org.gephi.layout.plugin.force.StepDisplacement;
 import org.gephi.layout.plugin.force.yifanHu.YifanHuLayout;
 import org.gephi.preview.api.PreviewController;
 import org.gephi.preview.api.PreviewModel;
+import org.gephi.preview.api.PreviewProperty;
+import org.gephi.preview.types.EdgeColor;
 import org.gephi.project.api.ProjectController;
 import org.gephi.project.api.Workspace;
+import org.gephi.statistics.plugin.GraphDistance;
 import org.openide.util.Lookup;
-
-import java.io.File;
-import java.io.IOException;
 
 public class NCI {
 
@@ -51,8 +60,6 @@ public class NCI {
         AppearanceController appearanceController = Lookup.getDefault().lookup(AppearanceController.class);
         AppearanceModel appearanceModel = appearanceController.getModel();
 
-
-
         //Import file
         Container container;
         try {
@@ -73,81 +80,17 @@ public class NCI {
         System.out.println("Nodes: " + graph.getNodeCount());
         System.out.println("Edges: " + graph.getEdgeCount());
 
-
-
-
-        //Giant Components Filter
-        GiantComponentBuilder.GiantComponentFilter giantComponentFilter = new GiantComponentBuilder.GiantComponentFilter();
-        giantComponentFilter.init(graph);
-        Query queryGiantComponent = filterController.createQuery(giantComponentFilter);
-
-        //Degree Filter
-        DegreeRangeBuilder.DegreeRangeFilter degreeFilter = new DegreeRangeBuilder.DegreeRangeFilter();
-        degreeFilter.init(graph);
-        degreeFilter.setRange(new Range(3, Integer.MAX_VALUE));     //Remove nodes with degree < 3
-        Query queryDegreeFilter = filterController.createQuery(degreeFilter);
-
-
-
-        filterController.add(queryGiantComponent);
-        filterController.add(queryDegreeFilter);
-        filterController.setSubQuery(queryGiantComponent,queryDegreeFilter);
-
-        INTERSECTIONBuilder.IntersectionOperator intersectionOperator = new INTERSECTIONBuilder.IntersectionOperator();
-        Query finalQuery = filterController.createQuery(intersectionOperator);
-        filterController.setSubQuery(finalQuery,queryGiantComponent);
-        GraphView view = filterController.filter(finalQuery);
-        graphModel.setVisibleView(view);    //Set the filter result as the visible view
-
-
-
-
-        /*
-
-        //Giant Filter
+        //Filter
         GiantComponentBuilder.GiantComponentFilter giantComponentFilter = new GiantComponentBuilder
                 .GiantComponentFilter();
         giantComponentFilter.init(graph);
-        Query queryGiantComponent = filterController.createQuery(giantComponentFilter);
-        GraphView view = filterController.filter(queryGiantComponent);
+        Query giantComponent = filterController.createQuery(giantComponentFilter);
+//        DegreeRangeFilter degreeFilter = new DegreeRangeFilter();
+//        degreeFilter.init(graph);
+//        degreeFilter.setRange(new Range(15, Integer.MAX_VALUE));     //Remove nodes with degree < 15
+//        Query query = filterController.createQuery(degreeFilter);
+        GraphView view = filterController.filter(giantComponent);
         graphModel.setVisibleView(view);    //Set the filter result as the visible view
-
-        //Partition Count Filter
-
-        PartitionCountBuilder.PartitionCountFilter partitionCountFilter = new PartitionCountBuilder.PartitionCountFilter(graphModel.getNodeTable().getColumn("published_date") ,appearanceModel );
-        partitionCountFilter.init(graph);
-        partitionCountFilter.setRange(new Range(180, 300));
-        System.out.println(partitionCountFilter.getRange());
-        System.out.println(graphModel.getNodeTable().getColumn("published_date"));
-        Query queryPartitionCountFilter = filterController.createQuery(partitionCountFilter);
-        System.out.println(queryGiantComponent.toString());
-        GraphView view1 = filterController.filter(queryPartitionCountFilter);
-        graphModel.setVisibleView(view1);
-
-        //Neighbor Network filter
-        NeighborsBuilder.NeighborsFilter neighborsFilter = new NeighborsBuilder.NeighborsFilter();
-        neighborsFilter.setDepth(1);
-        neighborsFilter.setSelf(true);
-        Query queryNeighbor = filterController.createQuery(neighborsFilter);
-        GraphView view2 = filterController.filter(queryNeighbor);
-        graphModel.setVisibleView(view2);
-
-
-        filterController.add(queryGiantComponent);
-        filterController.add(queryPartitionCountFilter);
-        filterController.add(queryNeighbor);
-        //filterController.setSubQuery(queryGiantComponent,queryPartitionCountFilter);
-
-
-        INTERSECTIONBuilder.IntersectionOperator intersectionOperator = new INTERSECTIONBuilder.IntersectionOperator();
-        Query finalQuery = filterController.createQuery(intersectionOperator);
-        filterController.setSubQuery(finalQuery,queryGiantComponent);
-        filterController.setSubQuery(finalQuery,queryNeighbor);
-        GraphView finalview = filterController.filter(finalQuery);
-        graphModel.setVisibleView(finalview);    //Set the filter result as the visible view
-
-
-        */
 
         //Export Status
         UndirectedGraph graphVisible = graphModel.getUndirectedGraphVisible();
@@ -184,8 +127,9 @@ public class NCI {
         exporter.setExportVisible(true);  //Only exports the visible (filtered) graph
         exporter.setWorkspace(workspace);
         try {
+            //Define Export file name
+            //ec.exportFile(new File("headless_simple.pdf"));
             ec.exportFile(new File("output.gexf"), exporter);
-            System.out.println("Filtered Graph Exported");
         } catch (IOException ex) {
             ex.printStackTrace();
             return;
